@@ -1,0 +1,14 @@
+{
+    "name": "https-bypass-sni",
+    "version": "0.1.0",
+    "main": "dist/fetch.js",
+    "scripts": {
+        "build": "tsc"
+    },
+    "keywords": [],
+    "author": "YieldRay",
+    "license": "ISC",
+    "devDependencies": {
+        "@types/node": "^18.14.2"
+    }
+}
