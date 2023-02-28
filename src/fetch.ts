@@ -1,6 +1,7 @@
 import { buffer } from "node:stream/consumers";
 import { Readable } from "node:stream";
 import httpRequest from "./http";
+import { dnsResolve } from "./resolve";
 
 /**
  * This is a incomplete function to meet web `fetch` function, some trait are missing, but can meet common usage
@@ -44,14 +45,20 @@ function timeoutSignal(ms: number) {
 }
 
 export default async function tryFetch(
-    conf: { resolve: (domain: string) => Promise<string[]>; timeout?: number },
+    conf: { ips?: string[]; resolve?: (domain: string) => Promise<string[]>; timeout?: number },
     input: RequestInfo | URL,
     init?: RequestInit
 ): Promise<Response> {
     const req = new Request(input, init);
     const { hostname } = new URL(req.url);
-    const ips = await conf.resolve(hostname);
-    
+    const ips = conf.ips || []; // use provided ips
+    conf.resolve ? ips.concat(await conf.resolve(hostname)) : null; // use resolve func
+
+    if (ips.length === 0) {
+        console.warn("Use default DNS server, make sure it can resolve correct ip(s)!");
+        ips.concat(await dnsResolve(hostname));
+    }
+
     const promises = ips.map((ip) =>
         fetchSNI(req, {
             ip,
@@ -63,6 +70,6 @@ export default async function tryFetch(
         return await Promise.any(promises);
     } catch (e) {
         console.warn(e); // this is for debug
-        throw new Error("No avaiable IP: " + JSON.stringify(ips));
+        throw new Error("No avaiable IP (make sure the resolved ips are correct): " + JSON.stringify(ips));
     }
 }

@@ -1,6 +1,7 @@
-import { Resolver } from "node:dns/promises";
+import { Resolver, resolve as defaultResolve } from "node:dns/promises";
 
-function dnsResolve(domain: string, servers = ["185.222.222.222", "45.11.45.11"]) {
+export function dnsResolve(domain: string, servers?: string[]) {
+    if (!servers) return defaultResolve(domain);
     const resolver = new Resolver();
     resolver.setServers(servers);
     return resolver.resolve4(domain);
@@ -29,7 +30,7 @@ async function doh(server: string, domain: string, type = "A") {
  * @description though this is problematic as it only ask for 'A' record, but can cover most cases
  * https://www.iana.org/assignments/dns-parameters/dns-parameters.xhtml#dns-parameters-6
  */
-async function dohResolve(domain: string, server = "https://cloudflare-dns.com/dns-query") {
+export async function dohResolve(domain: string, server = "https://cloudflare-dns.com/dns-query") {
     const resp = await doh(server, domain);
     if (resp.Status !== 0) throw new Error(`Error code ${resp.Status} from DoH server`);
     return resp.Answer.filter((a: any) => a.type === 1).map((a: any) => a.data) as string[];
@@ -40,6 +41,8 @@ async function dohResolve(domain: string, server = "https://cloudflare-dns.com/d
  * @param servers if is `string[]`, use normal dns. if is `string`, use doh
  */
 export function resolve(domain: string, servers: string[] | string = ["8.8.8.8"]) {
+    if (!Array.isArray(servers) && typeof servers !== "string") throw new Error("DNS servers set to wrong things!");
+
     const resolve = typeof servers === "string" ? dohResolve : dnsResolve;
     return resolve(domain, servers as any);
 }
