@@ -5,7 +5,7 @@ import { writeFileSync } from "node:fs";
 tryFetch(
     {
         timeout: 10000,
-        resolver: (domain) => resolve(domain, "https://d-o-h.v6.rocks/dns-query"),
+        resolve: (domain) => resolve(domain, "https://d-o-h.v6.rocks/dns-query"),
     },
     "https://i.pximg.net/img-original/img/2023/01/25/00/03/22/104786411_p0.jpg",
     {
