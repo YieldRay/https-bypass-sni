@@ -32,7 +32,7 @@ export default function httpRequest(
     socket.setKeepAlive(false);
 
     return new Promise((resolve, reject) => {
-        if (signal instanceof AbortSignal) {
+        if (signal && signal instanceof AbortSignal) {
             signal.addEventListener("abort", reject, { once: true });
         }
 

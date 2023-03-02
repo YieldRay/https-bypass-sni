@@ -1,5 +1,4 @@
 import { buffer } from "node:stream/consumers";
-import { Readable } from "node:stream";
 import httpRequest from "./http";
 import { dnsResolve } from "./resolve";
 
@@ -22,7 +21,7 @@ async function fetchSNI(input: RequestInfo | URL, init?: RequestInit & { ip?: st
     const { statusCode, statusMessage, headers, body } = await httpRequest({
         host,
         servername: hostname,
-        port: Number(port),
+        port: Number(port), // this will never be NaN if http response is corrrect
         path,
         method,
         headers: reqHeaders,
@@ -38,6 +37,7 @@ async function fetchSNI(input: RequestInfo | URL, init?: RequestInit & { ip?: st
 }
 
 function timeoutSignal(ms: number) {
+    if (typeof ms !== "number") throw new Error("timeout should be Number!");
     // just because ts-node has some error with AbortSignal.timeout
     const ab = new AbortController();
     setTimeout(() => ab.abort(), ms);
@@ -45,13 +45,19 @@ function timeoutSignal(ms: number) {
 }
 
 export default async function tryFetch(
-    conf: { ips?: string[]; resolve?: (domain: string) => Promise<string[]>; timeout?: number },
+    conf: {
+        ips?: string[];
+        resolve?: (domain: string) => Promise<string[]>;
+        timeout?: number;
+        notConcurrent?: boolean; // default is false, which can be faster but will establish more connection at the same time
+    },
     input: RequestInfo | URL,
     init?: RequestInit
 ): Promise<Response> {
     const req = new Request(input, init);
     const { hostname } = new URL(req.url);
     const ips = conf.ips || []; // use provided ips
+    const signal = conf.timeout ? timeoutSignal(conf.timeout) : undefined;
     conf.resolve ? ips.concat(await conf.resolve(hostname)) : null; // use resolve func
 
     if (ips.length === 0) {
@@ -59,15 +65,35 @@ export default async function tryFetch(
         ips.concat(await dnsResolve(hostname));
     }
 
-    const promises = ips.map((ip) =>
-        fetchSNI(req, {
-            ip,
-            signal: timeoutSignal(conf.timeout || 5000), // default timeout
-        })
-    );
+    const promise = conf.notConcurrent
+        ? new Promise<Response>(async (resolve, reject) => {
+              // this is in order
+              for (let ip of ips) {
+                  try {
+                      const res = await fetchSNI(req, {
+                          ip,
+                          signal,
+                      });
+                      resolve(res);
+                      return;
+                  } catch {
+                      console.info(ip + " is unable to connect");
+                  }
+                  reject(new Error("No avaiable IP (make sure the resolved ips are correct): " + JSON.stringify(ips)));
+              }
+          })
+        : Promise.any(
+              // this is concurrent
+              ips.map((ip) =>
+                  fetchSNI(req, {
+                      ip,
+                      signal,
+                  })
+              )
+          );
 
     try {
-        return await Promise.any(promises);
+        return await promise;
     } catch (e) {
         console.warn(e); // this is for debug
         throw new Error("No avaiable IP (make sure the resolved ips are correct): " + JSON.stringify(ips));

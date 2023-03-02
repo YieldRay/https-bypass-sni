@@ -1,10 +1,9 @@
 import tryFetch from "./src/fetch";
-import { resolve } from "./src/resolve";
 import { writeFileSync } from "node:fs";
 
 tryFetch(
     {
-        timeout: 10000,
+        timeout: 5000,
         ips: [
             "210.140.92.145",
             "210.140.139.136",
@@ -16,6 +15,7 @@ tryFetch(
             "210.140.92.146",
             "210.140.92.144",
         ],
+        notConcurrent: false, // default is false, which can be faster but will establish more connection
     },
     "https://i.pximg.net/img-original/img/2023/01/25/00/03/22/104786411_p0.jpg",
     {

@@ -1,4 +1,6 @@
 node_modules/
+out/
+test/
 dist/
 package-lock.json
 *.jpg
