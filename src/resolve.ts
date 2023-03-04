@@ -30,7 +30,7 @@ async function doh(server: string, domain: string, type = "A") {
  * @description though this is problematic as it only ask for 'A' record, but can cover most cases
  * https://www.iana.org/assignments/dns-parameters/dns-parameters.xhtml#dns-parameters-6
  */
-export async function dohResolve(domain: string, server = "https://cloudflare-dns.com/dns-query") {
+export async function dohResolve(domain: string, server = "https://1.1.1.1/dns-query") {
     const resp = await doh(server, domain);
     if (resp.Status !== 0) throw new Error(`Error code ${resp.Status} from DoH server`);
     return resp.Answer.filter((a: any) => a.type === 1).map((a: any) => a.data) as string[];
@@ -43,8 +43,8 @@ export async function dohResolve(domain: string, server = "https://cloudflare-dn
 export function resolve(domain: string, servers: string[] | string = ["8.8.8.8"]) {
     if (!Array.isArray(servers) && typeof servers !== "string") throw new Error("DNS servers set to wrong things!");
 
-    const resolve = typeof servers === "string" ? dohResolve : dnsResolve;
-    return resolve(domain, servers as any);
+    const resolveIt = typeof servers === "string" ? dohResolve : dnsResolve;
+    return resolveIt(domain, servers as any);
 }
 
 let cacheTable: Record<string, string[]> = {};

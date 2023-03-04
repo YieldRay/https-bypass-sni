@@ -3,5 +3,6 @@ out/
 test/
 dist/
 package-lock.json
+*.html
 *.jpg
 *.png

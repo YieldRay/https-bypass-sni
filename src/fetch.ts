@@ -58,11 +58,10 @@ export default async function tryFetch(
     const { hostname } = new URL(req.url);
     const ips = conf.ips || []; // use provided ips
     const signal = conf.timeout ? timeoutSignal(conf.timeout) : undefined;
-    conf.resolve ? ips.concat(await conf.resolve(hostname)) : null; // use resolve func
-
+    if (conf.resolve) ips.push(...(await conf.resolve(hostname))); // use resolve func
     if (ips.length === 0) {
         console.warn("Use default DNS server, make sure it can resolve correct ip(s)!");
-        ips.concat(await dnsResolve(hostname));
+        ips.push(...(await dnsResolve(hostname)));
     }
 
     const promise = conf.notConcurrent
